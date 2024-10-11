@@ -2,36 +2,25 @@ services:
   nginx:
     container_name: ${COMPOSE_PROJECT_NAME}--nginx
     hostname: ${COMPOSE_PROJECT_NAME}--nginx
-    image: nginx:1.23.3
+    image: nginx:latest
     volumes:
-      - ./volumes/nginx/logs:/var/log/nginx:rw
-      - ./volumes/nginx/certs:/etc/nginx/certs
-      - ./volumes/nginx/acme-challenge:/var/www/certbot
+      - ./images/nginx/templates:/etc/nginx/templates
+      - ./volumes/certbot/conf:/etc/letsencrypt
+      - ./volumes/certbot/www:/var/www/certbot
     ports:
       - ${NGINX_PORT_80}:80
+      - ${NGINX_PORT_443}:443
     environment:
       NGINX_DOMAIN: ${NGINX_DOMAIN}
     depends_on:
       - certbot
     restart: ${RESTART_FLAG}
-    deploy:
-      resources:
-        limits:
-          memory: ${MEMORY_LIMIT}
-        reservations:
-          memory: ${MEMORY_RESERVATION}
   certbot:
     container_name: ${COMPOSE_PROJECT_NAME}--certbot
     hostname: ${COMPOSE_PROJECT_NAME}--certbot
     image: certbot/certbot
     volumes:
-      - ./volumes/nginx/certs:/etc/nginx/certs
-      - ./volumes/nginx/acme-challenge:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h; done'"
+      - ./volumes/certbot/conf:/etc/letsencrypt
+      - ./volumes/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 6h & wait $!; certbot renew; done'"
     restart: ${RESTART_FLAG}
-    deploy:
-      resources:
-        limits:
-          memory: ${MEMORY_LIMIT}
-        reservations:
-          memory: ${MEMORY_RESERVATION}
